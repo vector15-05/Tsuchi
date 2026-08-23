@@ -12,35 +12,35 @@ datasource db {
   provider = "postgresql"
 }
 
-model User{
-  id String @id @default(uuid())
-  email String @unique
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
   subscriptions Subscription[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }
 
-model Anime{
-  id String @id @default(uuid())
-  externalId Int @unique
-  title String 
-  latestEpisode Int @default(0)
-  status String // "Airing" or "Finished"
-  subscribers Subscription[]
-  updatedAt DateTime @updatedAt
+model Anime {
+  id            String         @id @default(uuid())
+  externalId    Int            @unique
+  title         String
+  latestEpisode Int            @default(0)
+  status        String // "Airing" or "Finished"
+  subscribers   Subscription[]
+  updatedAt     DateTime       @updatedAt
 }
 
 model Subscription {
   id String @id @default(uuid())
-  
+
   userId String
-  user User @relation(fields: [userId], references: [id])
-  
+  user   User   @relation(fields: [userId], references: [id])
+
   animeId String
-  anime Anime @relation(fields: [animeId], references: [id])
+  anime   Anime  @relation(fields: [animeId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([userId,animeId])
+  @@unique([userId, animeId])
 }

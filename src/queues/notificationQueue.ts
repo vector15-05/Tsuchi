@@ -10,7 +10,8 @@ export const notificationQueue = new Queue('tsuchi-notifications',
                 type: 'exponential',
                 delay: 5000,
             },
-            removeOnComplete: true
+            removeOnComplete: true,
+            removeOnFail: 100,
         }
     }
 )

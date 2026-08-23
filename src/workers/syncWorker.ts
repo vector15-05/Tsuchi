@@ -1,6 +1,7 @@
 import { Worker } from "bullmq";
 import redisConnection from "../lib/redis.ts"
 import { prisma } from '../lib/prisma.ts'
+import { notificationQueue } from '../queues/notificationQueue.ts';
 
 interface JikanAnime {
     mal_id: number;
@@ -10,8 +11,20 @@ interface JikanAnime {
     status: string;
 }
 
-interface JikanResponse{
+interface JikanResponse {
     data: JikanAnime[]
+}
+
+interface SubscriptionWithUser {
+    id: string;
+    userId: string;
+    animeId: string;
+    createdAt: Date;
+    user: {
+        id: string;
+        email: string;
+        createdAt: Date;
+    };
 }
 
 export const syncWorker = new Worker(
@@ -26,10 +39,10 @@ export const syncWorker = new Worker(
             const { data } = await response.json() as JikanResponse;
 
             for (const show of data) {
-                if(!show.episodes) continue;
+                if (!show.episodes) continue;
 
                 const anime = await prisma.anime.upsert({
-                    where: {externalId: show.mal_id},
+                    where: { externalId: show.mal_id },
                     update: {
                         status: show.status,
                     },
@@ -41,23 +54,42 @@ export const syncWorker = new Worker(
                     }
                 });
 
-                if(show.episodes > anime.latestEpisode){
+                if (show.episodes > anime.latestEpisode) {
                     console.log(`[Tsuchi] New episode detected: ${anime.title} (Episode ${show.episodes})`);
 
                     await prisma.anime.update({
-                        where: {id: anime.id},
-                        data: {latestEpisode: show.episodes}
+                        where: { id: anime.id },
+                        data: { latestEpisode: show.episodes }
                     });
 
-                    // TODO: Email logic
+                    // Email logic
+
+                    const subscribers = await prisma.subscription.findMany({
+                        where: { animeId: anime.id },
+                        include: { user: true }
+                    });
+
+                    if (subscribers.length > 0) {
+                        const emailJobs = subscribers.map((sub: SubscriptionWithUser) => ({
+                            name: 'send-email',
+                            data: {
+                                email: sub.user.email,
+                                animeTitle: anime.title,
+                                episode: show.episodes
+                            }
+                        }));
+
+                        await notificationQueue.addBulk(emailJobs);
+                        console.log(`[Tsuchi] Queued ${subscribers.length} email jobs for ${anime.title}.`);
+                    }
                 }
             }
             console.log(`[Sync Worker] Database sync complete.`);
         }
     },
-    {connection: redisConnection}
+    { connection: redisConnection }
 );
 
-syncWorker.on('failed' , (job,err) => {
+syncWorker.on('failed', (job, err) => {
     console.error(`[Sync Worker] Job ${job?.id} failed:`, err.message);
 })
