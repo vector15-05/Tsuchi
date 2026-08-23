@@ -1,0 +1,20 @@
+{
+  "name": "tsuchi",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/express": "^5.0.6",
+    "prisma": "^7.9.1"
+  },
+  "peerDependencies": {
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@prisma/client": "^7.9.1",
+    "bullmq": "^6.2.0",
+    "express": "^5.2.1",
+    "ioredis": "^6.0.0"
+  }
+}
