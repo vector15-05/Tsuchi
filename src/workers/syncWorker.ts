@@ -2,6 +2,7 @@ import { Worker } from "bullmq";
 import redisConnection from "../lib/redis.ts"
 import { prisma } from '../lib/prisma.ts'
 import { notificationQueue } from '../queues/notificationQueue.ts';
+import { logger } from '../lib/logger.ts';
 
 interface JikanAnime {
     mal_id: number;
@@ -31,7 +32,7 @@ export const syncWorker = new Worker(
     'tsuchi-sync-queue',
     async (job) => {
         if (job.name === 'fetch-latest-episodes') {
-            console.log(`[Sync Worker] Fetching current season from Jikan API...`);
+            logger.info(`[Sync Worker] Fetching current season from Jikan API...`);
 
             const response = await fetch('https://api.jikan.moe/v4/seasons/now')
             if (!response.ok) throw new Error(`Jikan API failed: ${response.statusText}`);
@@ -54,8 +55,10 @@ export const syncWorker = new Worker(
                     }
                 });
 
+                logger.debug(`Checking ${anime.title}: API says Ep ${show.episodes}, DB says Ep ${anime.latestEpisode}`); 
+
                 if (show.episodes > anime.latestEpisode) {
-                    console.log(`[Tsuchi] New episode detected: ${anime.title} (Episode ${show.episodes})`);
+                    logger.info(`[Tsuchi] New episode detected: ${anime.title} (Episode ${show.episodes})`);
 
                     await prisma.anime.update({
                         where: { id: anime.id },
@@ -80,16 +83,16 @@ export const syncWorker = new Worker(
                         }));
 
                         await notificationQueue.addBulk(emailJobs);
-                        console.log(`[Tsuchi] Queued ${subscribers.length} email jobs for ${anime.title}.`);
+                        logger.info(`[Tsuchi] Queued ${subscribers.length} email jobs for ${anime.title}.`);
                     }
                 }
             }
-            console.log(`[Sync Worker] Database sync complete.`);
+            logger.info(`[Sync Worker] Database sync complete.`);
         }
     },
     { connection: redisConnection }
 );
 
 syncWorker.on('failed', (job, err) => {
-    console.error(`[Sync Worker] Job ${job?.id} failed:`, err.message);
+    logger.error({ jobId: job?.id, error: err.message }, 'Sync Worker Job failed');
 })

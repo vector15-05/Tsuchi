@@ -13,10 +13,14 @@
     "typescript": "^7.0.2"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.9.1",
     "bullmq": "^6.2.0",
     "express": "^5.2.1",
     "ioredis": "^6.0.0",
-    "nodemailer": "^9.0.5"
+    "nodemailer": "^9.0.5",
+    "pg": "^8.23.0",
+    "pino": "^10.3.1",
+    "pino-pretty": "^13.1.3"
   }
 }
