@@ -40,6 +40,7 @@ app.get('/api/anime', async (req, res) => {
                 title: true,
                 latestEpisode: true,
                 status: true,
+                imageUrl: true,
             }
         });
 
@@ -91,6 +92,53 @@ app.post('/api/subscribe', limiter, async (req, res) => {
         }
 
         logger.error(error as any, 'Subscription failed');
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+const unsubscribeSchema = z.object({
+    email: z.string().email('Invalid email address'),
+    externalAnimeId: z.number().int().positive(),
+});
+
+app.delete('/api/unsubscribe', limiter, async (req, res) => {
+    try {
+        const { email, externalAnimeId } = unsubscribeSchema.parse(req.body);
+
+        const user = await prisma.user.findUnique({ where: { email } });
+        const anime = await prisma.anime.findUnique({ where: { externalId: externalAnimeId } });
+
+        if (!user || !anime) {
+            res.status(404).json({ error: 'Record not found.' });
+            return;
+        }
+
+        await prisma.subscription.delete({
+            where: {
+                userId_animeId: {
+                    userId: user.id,
+                    animeId: anime.id
+                }
+            }
+        });
+
+        logger.info({ email, animeTitle: anime.title }, 'User unsubscribed');
+        res.status(200).json({ message: `Successfully unsubscribed from ${anime.title}.` });
+
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            const message = error.issues?.[0]?.message ?? 'Invalid request';
+            res.status(400).json({ error: message });
+            return;
+        }
+
+        const prismaError = error as { code?: string } | undefined;
+        if (prismaError?.code === 'P2025') {
+            res.status(404).json({ error: 'You are not subscribed to this anime.' });
+            return;
+        }
+
+        logger.error(error as any, 'Unsubscribe failed');
         res.status(500).json({ error: 'Internal server error' });
     }
 });

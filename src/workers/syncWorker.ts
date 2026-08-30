@@ -10,6 +10,12 @@ interface JikanAnime {
     title_english: string | null;
     episodes: number | null;
     status: string;
+    images: {
+        jpg: {
+            image_url: string;
+            large_image_url: string;
+        }
+    };
 }
 
 interface JikanResponse {
@@ -42,20 +48,24 @@ export const syncWorker = new Worker(
             for (const show of data) {
                 if (!show.episodes) continue;
 
+                const posterUrl = show.images?.jpg?.large_image_url || show.images?.jpg?.image_url;
+
                 const anime = await prisma.anime.upsert({
                     where: { externalId: show.mal_id },
                     update: {
                         status: show.status,
+                        imageUrl: posterUrl 
                     },
                     create: {
                         externalId: show.mal_id,
                         title: show.title_english || show.title,
                         latestEpisode: show.episodes,
                         status: show.status,
+                        imageUrl: posterUrl 
                     }
                 });
 
-                logger.debug(`Checking ${anime.title}: API says Ep ${show.episodes}, DB says Ep ${anime.latestEpisode}`); 
+                logger.debug(`Checking ${anime.title}: API says Ep ${show.episodes}, DB says Ep ${anime.latestEpisode}`);
 
                 if (show.episodes > anime.latestEpisode) {
                     logger.info(`[Tsuchi] New episode detected: ${anime.title} (Episode ${show.episodes})`);
@@ -78,7 +88,8 @@ export const syncWorker = new Worker(
                             data: {
                                 email: sub.user.email,
                                 animeTitle: anime.title,
-                                episode: show.episodes
+                                episode: show.episodes,
+                                externalAnimeId: anime.externalId
                             }
                         }));
 

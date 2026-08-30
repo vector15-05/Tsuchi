@@ -20,9 +20,12 @@ export const notificationWorker = new Worker(
     'tsuchi-notifications',
     async (job) => {
         if (job.name === 'send-email') {
-            const { email, animeTitle, episode } = job.data;
+            const { email, animeTitle, episode, externalAnimeId } = job.data;
 
             logger.info(`[Email Worker] Preparing alert for ${email} -> ${animeTitle} (Ep ${episode})`);
+
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+            const unsubscribeUrl = `${frontendUrl}/unsubscribe?email=${encodeURIComponent(email)}&animeId=${externalAnimeId}`;
 
             const subject = `New Episode Alert: ${animeTitle} Episode ${episode}!`;
             const textBody = `Hey there!\n\nJust letting you know that Episode ${episode} of ${animeTitle} is now airing.\n\nEnjoy!\n- Tsuchi Notifications`;
