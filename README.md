@@ -92,9 +92,3 @@ Prisma generates a client into `generated/prisma`. It is recommended to keep `ge
 ## Contributing
 
 Open a pull request with a clear description of changes. When modifying the Prisma schema, include migration files and regenerate the Prisma client.
-
-## License
-
-No license is specified. Add a `LICENSE` file if you plan to open-source this repository.
-
-If you want, I can add a `postinstall` script in `package.json` to run `prisma generate` automatically; tell me if you'd like that change.

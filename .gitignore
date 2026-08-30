@@ -42,3 +42,7 @@ CLAUDE.md
 .copilot*
 .vscode/prompts/
 .github/copilot/
+generated
+generated/
+.vscode/
+.windsurf/
