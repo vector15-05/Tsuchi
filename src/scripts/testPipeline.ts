@@ -6,8 +6,8 @@ async function runTest() {
 
     console.log(`[Test] 0. Fetching a guaranteed airing anime from Jikan...`);
     const response = await fetch('https://api.jikan.moe/v4/seasons/now');
-    const json = await response.json() as { data: any[] };
-    const { data } = json;
+    const respJson: any = await response.json();
+    const { data } = respJson;
 
     // Find the first anime in the current season that has a known episode count
     const targetAnime = data.find((show: any) => show.episodes && show.episodes > 0);
@@ -19,17 +19,22 @@ async function runTest() {
 
     const TARGET_MAL_ID = targetAnime.mal_id;
     const TARGET_TITLE = targetAnime.title;
+    const TARGET_IMAGE = targetAnime.images?.jpg?.large_image_url || targetAnime.images?.jpg?.image_url;
 
     console.log(`[Test] 1. Seeding ${TARGET_TITLE} (MAL ID: ${TARGET_MAL_ID}) with 0 episodes...`);
 
     const anime = await prisma.anime.upsert({
         where: { externalId: TARGET_MAL_ID },
-        update: { latestEpisode: 0 },
+        update: {
+            latestEpisode: 0,
+            imageUrl: TARGET_IMAGE
+        },
         create: {
             externalId: TARGET_MAL_ID,
             title: TARGET_TITLE,
             latestEpisode: 0,
             status: "Currently Airing",
+            imageUrl: TARGET_IMAGE
         }
     });
 
@@ -37,7 +42,9 @@ async function runTest() {
     const user = await prisma.user.upsert({
         where: { email: TEST_EMAIL },
         update: {},
-        create: { email: TEST_EMAIL }
+        create: {
+            email: TEST_EMAIL
+        }
     });
 
     console.log(`[Test] 3. Subscribing user to anime...`);
@@ -58,7 +65,7 @@ async function runTest() {
     console.log(`[Test] 4. Triggering the Sync Queue...`);
     await syncQueue.add('fetch-latest-episodes', {});
 
-    console.log(`[Test] ✅ Seed complete! Watch your server terminal now.`);
+    console.log(`[Test] Seed complete! Watch your server terminal now.`);
 
     await prisma.$disconnect();
     process.exit(0);

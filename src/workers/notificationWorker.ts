@@ -20,16 +20,16 @@ export const notificationWorker = new Worker(
     'tsuchi-notifications',
     async (job) => {
         if (job.name === 'send-email') {
-            const { email, animeTitle, episode, externalAnimeId } = job.data;
+            const { email, animeTitle, episode } = job.data;
 
-            logger.info(`[Email Worker] Preparing alert for ${email} -> ${animeTitle} (Ep ${episode})`);
+            logger.info({ email, animeTitle, episode }, 'Preparing email alert');
 
             const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-            const unsubscribeUrl = `${frontendUrl}/unsubscribe?email=${encodeURIComponent(email)}&animeId=${externalAnimeId}`;
+            const dashboardUrl = `${frontendUrl}/dashboard`;
 
             const subject = `New Episode Alert: ${animeTitle} Episode ${episode}!`;
-            const textBody = `Hey there!\n\nJust letting you know that Episode ${episode} of ${animeTitle} is now airing.\n\nEnjoy!\n- Tsuchi Notifications`;
 
+            const textBody = `Hey there!\n\nJust letting you know that Episode ${episode} of ${animeTitle} is now airing.\n\nEnjoy!\n- Tsuchi Notifications\n\n---\nTo manage your notifications or unsubscribe, log in to your dashboard at:\n${dashboardUrl}`;
 
             const info = await transporter.sendMail({
                 from: '"Tsuchi Alerts" <noreply@gmail.com>',
@@ -38,14 +38,12 @@ export const notificationWorker = new Worker(
                 text: textBody,
             });
 
-            logger.info(`[Email Worker] Sent to ${email} (Message ID: ${info.messageId})`);
+            logger.info({ email, messageId: info.messageId }, 'Email sent successfully');
         }
     },
-    {
-        connection: redisConnection,
-        concurrency: 10
-    }
+    { connection: redisConnection, concurrency: 10 }
 );
+
 
 notificationWorker.on('failed', (job, err) => {
     logger.warn({
@@ -55,3 +53,5 @@ notificationWorker.on('failed', (job, err) => {
         error: err.message
     }, 'Email Job failed');
 });
+
+logger.info('Notification Worker is online and listening for jobs...');

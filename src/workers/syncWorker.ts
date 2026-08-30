@@ -89,7 +89,6 @@ export const syncWorker = new Worker(
                                 email: sub.user.email,
                                 animeTitle: anime.title,
                                 episode: show.episodes,
-                                externalAnimeId: anime.externalId
                             }
                         }));
 

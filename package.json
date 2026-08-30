@@ -16,10 +16,12 @@
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.9.1",
+    "better-auth": "^1.7.2",
     "bullmq": "^6.2.0",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "express-rate-limit": "^8.7.0",
+    "helmet": "^8.3.0",
     "ioredis": "^6.0.0",
     "nodemailer": "^9.0.5",
     "pg": "^8.23.0",
