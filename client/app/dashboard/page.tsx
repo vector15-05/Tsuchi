@@ -154,6 +154,7 @@ export default function DashboardPage() {
                   title={s.title}
                   imageUrl={s.imageUrl}
                   latestEpisode={s.latestEpisode}
+                  status={s.status}
                   actionText={dropping.has(s.externalId) ? 'Dropping…' : 'Drop'}
                   onAction={() => handleDrop(s.externalId, s.title)}
                   isLoadingAction={dropping.has(s.externalId)}

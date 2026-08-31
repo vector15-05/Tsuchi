@@ -5,6 +5,9 @@ import { logger } from '../lib/logger.ts';
 export const getAnimeList = async (req: Request, res: Response) => {
     try {
         const animeList = await prisma.anime.findMany({
+            where: {
+                status: 'Airing'
+            },
             orderBy: {
                 title: 'asc'
             },

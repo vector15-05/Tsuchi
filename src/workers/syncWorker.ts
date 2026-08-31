@@ -50,26 +50,42 @@ export const syncWorker = new Worker(
             let updatedAnime = 0;
             let queuedJobs = 0;
 
+            const normalizeStatus = (statusStr: string | null | undefined, episodeCount: number | null): string => {
+                if (!episodeCount) return 'Unknown'; // unknown count — hide from dashboard
+                if (!statusStr) return 'Airing';
+                const lower = statusStr.toLowerCase();
+                if (lower.includes('finish') || lower.includes('complete') || lower.includes('ended')) {
+                    return 'Finished';
+                }
+                return 'Airing';
+            };
+
             for (const show of data) {
-                if (!show.episodes) continue;
                 totalAnime++;
 
                 const posterUrl = show.images?.jpg?.large_image_url || show.images?.jpg?.image_url;
+                const normalizedStatus = normalizeStatus(show.status, show.episodes);
 
                 const anime = await prisma.anime.upsert({
                     where: { externalId: show.mal_id },
                     update: {
-                        status: show.status,
-                        imageUrl: posterUrl 
+                        status: normalizedStatus,
+                        imageUrl: posterUrl,
+                        ...(show.title_english ? { title: show.title_english } : {})
                     },
                     create: {
                         externalId: show.mal_id,
                         title: show.title_english || show.title,
-                        latestEpisode: show.episodes,
-                        status: show.status,
-                        imageUrl: posterUrl 
+                        latestEpisode: show.episodes ?? 0,
+                        status: normalizedStatus,
+                        imageUrl: posterUrl
                     }
                 });
+
+                if (!show.episodes) {
+                    logger.debug(`[${anime.title}] Episode count unknown — marked as 'Unknown', excluded from dashboard`);
+                    continue;
+                }
 
                 logger.debug(`Checking ${anime.title}: API says Ep ${show.episodes}, DB says Ep ${anime.latestEpisode}`);
 

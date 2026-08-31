@@ -20,15 +20,15 @@ const setColor = (uniform: ColorUniform, hex: string) => {
   uniform.value[2] = color[2];
 };
 
-const vertex = `#version 300 es
-in vec2 position;
+const vertex = `
+attribute vec2 position;
 
 void main() {
   gl_Position = vec4(position, 0.0, 1.0);
 }
 `;
 
-const fragment = `#version 300 es
+const fragment = `
 precision highp float;
 
 uniform vec2 uResolution;
@@ -57,8 +57,6 @@ uniform float uRotationSpeed;
 uniform float uLightMode;
 uniform vec3 uLineColor;
 uniform vec3 uGlowColor;
-
-out vec4 fragColor;
 
 #define MAX_LAYERS 10
 
@@ -146,7 +144,7 @@ void main() {
 
   float noise = (layeredGrain(gl_FragCoord.xy) - 0.5) * uGrain;
   outputColor = clamp(outputColor + noise, 0.0, 1.0);
-  fragColor = vec4(outputColor, 1.0);
+  gl_FragColor = vec4(outputColor, 1.0);
 }
 `;
 
@@ -228,19 +226,30 @@ const GhostFibers: FC<GhostFibersProps> = ({
     const container = containerRef.current;
     if (!container) return;
 
-    const renderer = new Renderer({
-      webgl: 2,
-      alpha: false,
-      antialias: false,
-      dpr: Math.min(Math.max(dpr, 0.5), 2)
-    });
+    // Let OGL auto-detect the best context (WebGL2 or WebGL1)
+    // Shaders are GLSL ES 1.0, compatible with both
+    let renderer: InstanceType<typeof Renderer>;
+    try {
+      renderer = new Renderer({
+        alpha: false,
+        antialias: false,
+        dpr: Math.min(Math.max(dpr, 0.5), 2)
+      });
+    } catch (e) {
+      console.warn('[GhostFibers] WebGL unavailable:', e);
+      return;
+    }
     const gl = renderer.gl;
     const canvas = gl.canvas as HTMLCanvasElement;
+    // Pre-size to window so first frame isn't 0×0
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
     canvas.style.width = '100%';
     canvas.style.height = '100%';
     canvas.style.display = 'block';
     canvas.setAttribute('aria-hidden', 'true');
     container.appendChild(canvas);
+
 
     const geometry = new Triangle(gl);
     const program = new Program(gl, {
@@ -371,6 +380,34 @@ const GhostFibers: FC<GhostFibersProps> = ({
         frameRate = Math.min(Math.max(value, 1), 120);
       }
     });
+
+    // Apply initial prop values immediately so first frame uses correct uniforms
+    setColor(program.uniforms.uLineColor, lineColor);
+    setColor(program.uniforms.uGlowColor, glowColor);
+    program.uniforms.uSpeed.value = speed;
+    program.uniforms.uScale.value = scale;
+    program.uniforms.uRotation.value = rotation;
+    program.uniforms.uRotationSpeed.value = rotationSpeed;
+    program.uniforms.uLayers.value = Math.min(Math.max(Math.round(layers), 1), 10);
+    program.uniforms.uWaveAmplitude.value = waveAmplitude;
+    program.uniforms.uWaveFrequency.value = waveFrequency;
+    program.uniforms.uWaveSpeed.value = waveSpeed;
+    program.uniforms.uLayerSpeed.value = layerSpeed;
+    program.uniforms.uTwist.value = twist;
+    program.uniforms.uTwistFrequency.value = twistFrequency;
+    program.uniforms.uTwistSpeed.value = twistSpeed;
+    program.uniforms.uLineFrequency.value = lineFrequency;
+    program.uniforms.uLineSpacing.value = lineSpacing;
+    program.uniforms.uLineSharpness.value = lineSharpness;
+    program.uniforms.uGlowFalloff.value = glowFalloff;
+    program.uniforms.uGlowIntensity.value = glowIntensity;
+    program.uniforms.uBrightness.value = brightness;
+    program.uniforms.uBlueBoost.value = blueBoost;
+    program.uniforms.uVignette.value = vignette;
+    program.uniforms.uGrain.value = grain;
+    program.uniforms.uLightMode.value = lightMode ? 1 : 0;
+    frameRate = Math.min(Math.max(fps, 1), 120);
+    isPaused = paused;
 
     setSize();
     start();

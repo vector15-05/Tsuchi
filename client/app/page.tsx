@@ -155,6 +155,7 @@ export default function HomePage() {
                     title={a.title}
                     imageUrl={a.imageUrl}
                     latestEpisode={a.latestEpisode}
+                    status={a.status}
                     actionText={
                       isSubbed
                         ? 'Unsubscribe'

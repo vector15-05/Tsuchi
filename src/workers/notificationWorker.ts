@@ -1,7 +1,7 @@
 import { Worker } from 'bullmq';
 import redisConnection from '../lib/redis.ts';
 import { logger } from '../lib/logger.ts';
-import { sendEpisodeNotification } from '../lib/mailer.ts';
+import { sendEpisodeNotification, sendWelcomeEmail } from '../lib/mailer.ts';
 
 export const notificationWorker = new Worker(
     'tsuchi-notifications',
@@ -12,6 +12,11 @@ export const notificationWorker = new Worker(
 
             logger.info({ email, animeTitle, episodeNumber }, 'Processing email alert job');
             await sendEpisodeNotification(email, animeTitle, episodeNumber);
+        } else if (job.name === 'send-welcome-email') {
+            const { email, name } = job.data;
+
+            logger.info({ email, name }, 'Processing welcome email job');
+            await sendWelcomeEmail(email, name);
         }
     },
     { connection: redisConnection, concurrency: 10 }

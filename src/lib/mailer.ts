@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 import { logger } from './logger.ts';
-import { generateEmailHtml, generateSyncCompleteEmailHtml } from './generateEmailHtml.ts';
+import { generateEmailHtml, generateSyncCompleteEmailHtml, generateWelcomeEmailHtml } from './generateEmailHtml.ts';
 
 export const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -16,6 +16,43 @@ export const transporter = nodemailer.createTransport({
 
 export const getMasterEmail = (): string => {
     return (process.env.MASTER_EMAIL || process.env.ADMIN_EMAIL || process.env.SMTP_USER || '').trim();
+};
+
+export const sendWelcomeEmail = async (
+    userEmail: string,
+    userName?: string
+): Promise<void> => {
+    const htmlContent = generateWelcomeEmailHtml(userName);
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const dashboardUrl = `${frontendUrl}/dashboard`;
+    const subject = `Welcome to Tsuchi Anime Notifications!`;
+    const textBody = `Welcome to Tsuchi!\n\nYour account has been successfully created. You can now subscribe to your favorite currently airing anime series and receive instant email alerts whenever new episodes release.\n\nVisit your dashboard to get started:\n${dashboardUrl}\n\n- Tsuchi Notifications`;
+
+    const info = await transporter.sendMail({
+        from: '"Tsuchi" <noreply@gmail.com>',
+        to: userEmail,
+        subject,
+        html: htmlContent,
+        text: textBody,
+    });
+
+    logger.info({ email: userEmail, messageId: info.messageId }, 'Welcome email sent');
+
+    const masterEmail = getMasterEmail();
+    if (masterEmail && masterEmail.toLowerCase() !== userEmail.toLowerCase()) {
+        try {
+            await transporter.sendMail({
+                from: '"Tsuchi System" <noreply@gmail.com>',
+                to: masterEmail,
+                subject: `[Master Copy] New User Registered: ${userEmail}`,
+                html: htmlContent,
+                text: `[Copy sent to new user: ${userEmail}]\n\n${textBody}`,
+            });
+            logger.info({ masterEmail, newUserEmail: userEmail }, 'Master copy welcome email sent');
+        } catch (err) {
+            logger.error(err, 'Failed to send master copy welcome email');
+        }
+    }
 };
 
 export const sendEpisodeNotification = async (

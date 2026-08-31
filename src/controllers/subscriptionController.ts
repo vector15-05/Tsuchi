@@ -18,7 +18,10 @@ export const getUserSubscriptions = async (req: AuthRequest, res: Response) => {
 
         const subscriptions = await prisma.subscription.findMany({
             where: {
-                userId: userId
+                userId: userId,
+                anime: {
+                    status: 'Airing'
+                }
             },
             include: {
                 anime: {
