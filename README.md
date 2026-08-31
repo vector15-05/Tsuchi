@@ -52,21 +52,21 @@ Tsuchi is an end-to-end full-stack application that tracks currently airing anim
 ## Architecture Sequence Diagram
 
 ```mermaid
-flowchart TD
-    User["User / Browser"] -->|"Next.js 15 + Better Auth"| ClientApp["Frontend App"]
-    ClientApp -->|"REST API"| Backend["Express Backend API (:6767)"]
-    Backend -->|"Prisma ORM"| Postgres[("Neon PostgreSQL DB")]
-    Backend -->|"Upstash Redis"| SyncQueue["BullMQ Sync Queue"]
-    Backend -->|"Upstash Redis"| NotificationQueue["BullMQ Notification Queue"]
-    
-    subgraph BackgroundServices["Background Processing Services"]
-        Cron["Hourly Cron Scheduler"] -->|"Trigger"| SyncQueue
+graph TD
+    User["User / Browser"] -->|Next.js 15 + Better Auth| ClientApp["Frontend App"]
+    ClientApp -->|REST API| Backend["Express Backend API (:6767)"]
+    Backend -->|Prisma ORM| Postgres[("Neon PostgreSQL DB")]
+    Backend -->|Upstash Redis| SyncQueue["BullMQ Sync Queue"]
+    Backend -->|Upstash Redis| NotificationQueue["BullMQ Notification Queue"]
+
+    subgraph BackgroundServices ["Background Processing Services"]
+        Cron["Hourly Cron Scheduler"] -->|Trigger| SyncQueue
         SyncQueue --> SyncWorker["Sync Worker"]
-        SyncWorker -->|"HTTP REST"| JikanAPI["Jikan API v4"]
-        SyncWorker -->|"Update State"| Postgres
-        SyncWorker -->|"Enqueue Alert Jobs"| NotificationQueue
+        SyncWorker -->|HTTP REST| JikanAPI["Jikan API v4"]
+        SyncWorker -->|Update State| Postgres
+        SyncWorker -->|Enqueue Alert Jobs| NotificationQueue
         NotificationQueue --> NotificationWorker["Notification Worker"]
-        NotificationWorker -->|"SMTP Email"| EmailService["Subscriber & Master Email"]
+        NotificationWorker -->|SMTP Email| EmailService["Subscriber & Master Email"]
     end
 ```
 
