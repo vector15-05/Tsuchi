@@ -1,55 +1,55 @@
-# ⚡ Tsuchi — Real-Time Anime Release Tracking & Notification Platform
+# Tsuchi — Real-Time Anime Release Tracking & Notification Platform
 
 <p align="center">
   <img src="client/public/android-chrome-512x512.png" width="120" alt="Tsuchi Logo" />
 </p>
 
 <p align="center">
-  <b>Cinematic, automated, real-time anime episode release tracking & instant email notification platform.</b>
+  <b>Automated, real-time anime episode release tracking and instant notification system.</b>
 </p>
 
 ---
 
-## 🌟 Overview
+## Overview
 
-**Tsuchi** is a full-stack platform that monitors airing anime series in real-time using the Jikan (MyAnimeList) API and notifies users instantly whenever a new episode airs. It pairs an immersive, dark glassmorphism WebGL-powered Next.js frontend with an event-driven Express backend backed by Prisma ORM, Neon PostgreSQL, Upstash Redis, and BullMQ queues.
+Tsuchi is an end-to-end full-stack application that tracks currently airing anime series via the Jikan (MyAnimeList) API and notifies subscribed users when new episodes are released. It combines a WebGL-enhanced Next.js frontend with an event-driven Express backend powered by Prisma ORM, Neon PostgreSQL, Upstash Redis, and BullMQ background processing queues.
 
 ---
 
-## 🛠️ Tech Stack
+## Technical Architecture
 
-### **Frontend**
-- **Framework**: [Next.js 15](https://nextjs.org/) (App Router, React 19)
-- **Styling**: Vanilla CSS & [Tailwind CSS v4](https://tailwindcss.com/)
-- **Visual Effects**: OGL WebGL dynamic `GhostFibers` animated background canvas
-- **Authentication**: [Better Auth](https://www.better-auth.com/) Client (`@better-auth/react`)
-- **Icons**: Lucide React
+### Frontend
+- **Framework**: Next.js 15 (App Router, React 19)
+- **Styling**: Vanilla CSS and Tailwind CSS v4
+- **Visual Effects**: OGL WebGL dynamic shader canvas (`GhostFibers`)
+- **Authentication**: Better Auth Client (`@better-auth/react`)
+- **Iconography**: Lucide React
 
-### **Backend**
-- **Runtime**: [Node.js](https://nodejs.org/) / [Bun](https://bun.sh/)
-- **API Framework**: Express.js
-- **Database & ORM**: PostgreSQL (Neon) with [Prisma ORM 7](https://www.prisma.io/) & `@prisma/adapter-pg`
+### Backend
+- **Runtime**: Node.js / Bun
+- **API Server**: Express.js
+- **Database & ORM**: PostgreSQL (Neon) with Prisma ORM 7 (`@prisma/adapter-pg`)
 - **Authentication**: Better Auth Server with Prisma Adapter
 - **Background Jobs & Queues**: BullMQ with Upstash Redis
-- **Notifications**: Nodemailer (SMTP) with master email carbon-copying
+- **Notification Services**: Nodemailer (SMTP) with master administrative carbon-copying
 - **External Integration**: Jikan API v4 (MyAnimeList REST API)
 
 ---
 
-## ⚡ Key Features
+## System Capabilities
 
-- **🌐 Dynamic Airing Anime Radar**: Fetches and renders currently airing seasonal anime with live episode counts.
-- **🎨 Glassmorphism & WebGL Canvas UI**: Deep dark aesthetic with an animated flowing shader background (`GhostFibers`).
-- **🔐 Better Auth Authentication**: Secure credential login/signup with session management and user state persistence.
-- **📌 Interactive Subscription Radar**: Toggle subscriptions directly from the homepage or manage your watchlist on the dashboard.
-- **🔄 Hourly Automated Jikan Sync**: Background worker queries the Jikan API, detects episode increments, and updates the database.
-- **📩 Real-Time Email Alerts**: Queued notification workers dispatch HTML release alert emails to subscribers.
-- **👑 Master Administrator Copy**: Automatically routes complete sync reports and carbon-copies subscriber notifications to the master admin email.
-- **🧪 E2E Test Pipeline**: Built-in verification CLI (`src/scripts/testPipeline.ts`) to validate database connectivity, Jikan fetching, and BullMQ queue execution.
+- **Real-Time Airing Radar**: Aggregates and displays currently airing seasonal anime with live episode counts.
+- **Glassmorphism & WebGL Canvas UI**: Modern dark theme backed by a dynamic GPU-rendered shader canvas (`GhostFibers`).
+- **Better Auth Integration**: Secure password-based authentication with session management and user state persistence.
+- **Interactive Subscription Management**: Allows users to subscribe or unsubscribe directly from the homepage or manage their active watchlist via the dashboard.
+- **Automated Jikan Sync**: Scheduled background worker queries the Jikan API, detects episode increments, and updates state in the PostgreSQL database.
+- **Queued Email Dispatch**: Asynchronous notification workers compile and send HTML release notifications to subscribers.
+- **Master Administrator Audit Copy**: Automatically routes complete sync execution reports and carbon-copies subscriber notifications to the configured administrator email.
+- **End-to-End Verification Pipeline**: Includes a CLI verification script (`src/scripts/testPipeline.ts`) to validate database connectivity, Jikan API parsing, email rendering, and BullMQ queue execution.
 
 ---
 
-## 🏗️ Architecture Flow
+## Architecture Sequence Diagram
 
 ```mermaid
 flowchart TD
@@ -73,11 +73,11 @@ flowchart TD
 
 ---
 
-## ⚙️ Environment Configuration
+## Environment Configuration
 
-### **Backend (`.env`)**
+### Backend Environment Configuration (`.env`)
 
-Create a `.env` file in the root directory:
+Create a `.env` file in the project root directory:
 
 ```env
 DATABASE_URL="postgresql://user:password@host/neondb?sslmode=require"
@@ -99,7 +99,7 @@ FRONTEND_URL="http://localhost:3000"
 LOG_LEVEL="info"
 ```
 
-### **Frontend (`client/.env.local`)**
+### Frontend Environment Configuration (`client/.env.local`)
 
 Create a `.env.local` file in the `client/` directory:
 
@@ -110,64 +110,64 @@ BETTER_AUTH_URL="http://localhost:6767"
 
 ---
 
-## 🚀 Getting Started
+## Installation & Setup
 
-### **1. Clone the Repository & Install Dependencies**
+### 1. Repository Setup & Dependency Installation
 
 ```bash
 git clone https://github.com/vector15-05/Tsuchi.git
 cd Tsuchi
 
 # Install root dependencies
-bun install   # or npm install
+bun install
 
 # Install frontend dependencies
 cd client
-bun install   # or npm install
+bun install
 cd ..
 ```
 
 ---
 
-### **2. Database Setup & Migrations**
+### 2. Database Schema Generation & Migration
 
 ```bash
 # Generate Prisma Client (Prisma 7 with pg adapter)
 npx prisma generate
 
-# Run migrations
+# Apply database migrations
 npx prisma migrate dev
 ```
 
 ---
 
-### **3. Start the Backend API & Queue Worker**
+### 3. Execution
+
+#### Backend API Server & Worker Process
 
 ```bash
-# Development server (API + BullMQ workers)
+# Starts Express HTTP server and BullMQ background workers
 bun run src/index.ts
 ```
 
-The Express API will listen on `http://localhost:6767` and BullMQ workers will begin listening for queue jobs.
+The Express API will listen on `http://localhost:6767` and BullMQ workers will initialize listening for queue jobs.
 
----
+#### Next.js Development Server
 
-### **4. Start the Next.js Frontend**
-
-In a separate terminal window:
+In a separate terminal session:
 
 ```bash
 cd client
 bun run dev
 ```
 
-The application UI will be accessible at `http://localhost:3000`.
+The user interface will be available at `http://localhost:3000`.
 
 ---
 
-## 🧪 Running the E2E Verification Test Pipeline
+## Verification & Automated Testing
 
-Tsuchi includes an automated end-to-end verification script to test DB connectivity, Jikan API integration, subscription seeding, email generation, and BullMQ queue execution:
+Tsuchi provides a comprehensive verification pipeline script to test database persistence, API ingestion, email rendering, and queue processing end-to-end:
 
 ```bash
 bun run src/scripts/testPipeline.ts
@@ -175,6 +175,6 @@ bun run src/scripts/testPipeline.ts
 
 ---
 
-## 📄 License
+## License
 
-This project is licensed under the [MIT License](LICENSE).
+This software is licensed under the [MIT License](LICENSE).
