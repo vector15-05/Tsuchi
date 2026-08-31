@@ -2,6 +2,7 @@ import { Worker } from 'bullmq';
 import redisConnection from '../lib/redis.ts';
 import nodemailer from 'nodemailer';
 import { logger } from '../lib/logger.ts';
+import { generateEmailHtml } from '../lib/generateEmailHtml.ts';
 
 
 const transporter = nodemailer.createTransport({
@@ -16,11 +17,18 @@ const transporter = nodemailer.createTransport({
     maxConnections: 5,
 });
 
+
 export const notificationWorker = new Worker(
     'tsuchi-notifications',
     async (job) => {
         if (job.name === 'send-email') {
             const { email, animeTitle, episode } = job.data;
+
+            const episodeNumber = job.data.episodeNumber ?? job.data.episode;
+            const htmlContent = generateEmailHtml(
+                animeTitle,
+                episodeNumber
+            );
 
             logger.info({ email, animeTitle, episode }, 'Preparing email alert');
 
@@ -35,6 +43,7 @@ export const notificationWorker = new Worker(
                 from: '"Tsuchi Alerts" <noreply@gmail.com>',
                 to: email,
                 subject: subject,
+                html: htmlContent,
                 text: textBody,
             });
 
