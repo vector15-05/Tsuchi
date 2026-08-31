@@ -22,9 +22,13 @@ app.use('/api/auth', toNodeHandler(auth));
 app.use('/api/anime', animeRoutes);
 app.use('/api', subscriptionRoutes);
 
+app.get('/health', (_req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 const PORT = process.env.PORT || 3000;
 
-const server = app.listen(PORT, async () => {
+const server = app.listen(Number(PORT), '0.0.0.0', async () => {
     logger.info(`Tsuchi API is running on port ${PORT}`);
 
     await scheduleAnimeSync();
