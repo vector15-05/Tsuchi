@@ -9,7 +9,7 @@ export async function scheduleAnimeSync() {
     await syncQueue.upsertJobScheduler(
         'hourly-anime-sync',
         {
-            pattern: '*/15 * * * *'
+            pattern: '0 * * * *'
         },
         {
             name: 'fetch-latest-episodes',
