@@ -3,6 +3,7 @@ import redisConnection from "../lib/redis.ts"
 import { prisma } from '../lib/prisma.ts'
 import { notificationQueue } from '../queues/notificationQueue.ts';
 import { logger } from '../lib/logger.ts';
+import { sendSyncCompleteEmail } from '../lib/mailer.ts';
 
 interface JikanAnime {
     mal_id: number;
@@ -40,13 +41,18 @@ export const syncWorker = new Worker(
         if (job.name === 'fetch-latest-episodes') {
             logger.info(`[Sync Worker] Fetching current season from Jikan API...`);
 
-            const response = await fetch('https://api.jikan.moe/v4/seasons/now')
+            const response = await fetch('https://api.jikan.moe/v4/seasons/now');
             if (!response.ok) throw new Error(`Jikan API failed: ${response.statusText}`);
 
             const { data } = await response.json() as JikanResponse;
 
+            let totalAnime = 0;
+            let updatedAnime = 0;
+            let queuedJobs = 0;
+
             for (const show of data) {
                 if (!show.episodes) continue;
+                totalAnime++;
 
                 const posterUrl = show.images?.jpg?.large_image_url || show.images?.jpg?.image_url;
 
@@ -68,6 +74,7 @@ export const syncWorker = new Worker(
                 logger.debug(`Checking ${anime.title}: API says Ep ${show.episodes}, DB says Ep ${anime.latestEpisode}`);
 
                 if (show.episodes > anime.latestEpisode) {
+                    updatedAnime++;
                     logger.info(`[Tsuchi] New episode detected: ${anime.title} (Episode ${show.episodes})`);
 
                     await prisma.anime.update({
@@ -93,11 +100,13 @@ export const syncWorker = new Worker(
                         }));
 
                         await notificationQueue.addBulk(emailJobs);
+                        queuedJobs += subscribers.length;
                         logger.info(`[Tsuchi] Queued ${subscribers.length} email jobs for ${anime.title}.`);
                     }
                 }
             }
             logger.info(`[Sync Worker] Database sync complete.`);
+            await sendSyncCompleteEmail({ totalAnime, updatedAnime, queuedJobs });
         }
     },
     { connection: redisConnection }
