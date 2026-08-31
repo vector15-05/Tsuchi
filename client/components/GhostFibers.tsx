@@ -292,7 +292,7 @@ const GhostFibers: FC<GhostFibersProps> = ({
       if (frameId !== 0) cancelAnimationFrame(frameId);
       frameId = 0;
     };
-    const canAnimate = () => isVisible && isPageVisible && !isPaused && !reducedMotion.matches;
+    const canAnimate = () => isPageVisible && !isPaused && !reducedMotion.matches;
 
     const loop = (now: number) => {
       frameId = 0;
@@ -312,14 +312,16 @@ const GhostFibers: FC<GhostFibersProps> = ({
     };
 
     const start = () => {
-      if (!canAnimate() || frameId !== 0) return;
+      if (frameId !== 0) return;
       previousTime = performance.now();
       frameId = requestAnimationFrame(loop);
     };
 
     const setSize = () => {
       const rect = container.getBoundingClientRect();
-      renderer.setSize(Math.max(1, Math.floor(rect.width)), Math.max(1, Math.floor(rect.height)));
+      const width = Math.max(1, Math.floor(rect.width || window.innerWidth || 1920));
+      const height = Math.max(1, Math.floor(rect.height || window.innerHeight || 1080));
+      renderer.setSize(width, height);
       program.uniforms.uResolution.value[0] = gl.drawingBufferWidth;
       program.uniforms.uResolution.value[1] = gl.drawingBufferHeight;
       render();

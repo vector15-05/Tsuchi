@@ -22,7 +22,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
       <body className="relative min-h-screen bg-black text-white font-mono flex flex-col">
 
         {/* ── Fixed WebGL fiber background ─────────────────── */}
-        <div className="fixed inset-0 -z-10">
+        <div className="fixed inset-0 z-0 pointer-events-none">
           <GhostFibers
             lineColor="#350e21"
             glowColor="#3437A0"
@@ -51,15 +51,15 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
           />
         </div>
 
-        {/* ── Navbar ───────────────────────────────────────── */}
-        <Navbar />
-
-        {/* ── Page content ─────────────────────────────────── */}
-        <ToastProvider>
-          <main className="flex-1 flex flex-col min-h-0">
-            {children}
-          </main>
-        </ToastProvider>
+        {/* ── Page content container (z-10) ────────────────── */}
+        <div className="relative z-10 flex-1 flex flex-col min-h-screen">
+          <Navbar />
+          <ToastProvider>
+            <main className="flex-1 flex flex-col min-h-0">
+              {children}
+            </main>
+          </ToastProvider>
+        </div>
 
       </body>
     </html>

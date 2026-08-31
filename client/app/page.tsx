@@ -76,9 +76,9 @@ export default function HomePage() {
       return;
     }
     apiClient
-      .get<SubscriptionItem[]>('/user/subscriptions')
+      .get<AnimeItem[]>('/user/subscriptions')
       .then(res => {
-        const subscribedIds = new Set(res.data.map(sub => sub.animeId));
+        const subscribedIds = new Set(res.data.map(anime => anime.externalId));
         setSubscribed(subscribedIds);
       })
       .catch(() => {
@@ -97,7 +97,7 @@ export default function HomePage() {
 
     try {
       if (isSubbed) {
-        await apiClient.delete('/unsubscribe', { data: { animeId } });
+        await apiClient.delete('/unsubscribe', { data: { externalAnimeId: animeId } });
         setSubscribed(prev => {
           const next = new Set(prev);
           next.delete(animeId);
@@ -105,7 +105,7 @@ export default function HomePage() {
         });
         toast(`Unsubscribed from ${title}`, 'info');
       } else {
-        await apiClient.post('/subscribe', { animeId });
+        await apiClient.post('/subscribe', { externalAnimeId: animeId });
         setSubscribed(prev => new Set(prev).add(animeId));
         toast(`Subscribed to ${title}!`, 'success');
       }
@@ -157,7 +157,7 @@ export default function HomePage() {
                     latestEpisode={a.latestEpisode}
                     actionText={
                       isSubbed
-                        ? '✓ Subscribed'
+                        ? 'Unsubscribe'
                         : isLoggedIn
                         ? 'Subscribe'
                         : 'Sign in to Subscribe'

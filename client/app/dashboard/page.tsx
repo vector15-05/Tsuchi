@@ -6,17 +6,14 @@ import { useSession } from '@/src/lib/authClient';
 import apiClient from '@/src/lib/apiClient';
 import AnimeCard from '@/components/anime/AnimeCard';
 import { Button } from '@/components/ui/Button';
+import { useToast } from '@/components/ui/Toast';
 
-interface Subscription {
-  id: string;
-  animeId: number;
-  anime: {
-    externalId: number;
-    title: string;
-    latestEpisode: number;
-    status: string;
-    imageUrl: string;
-  };
+interface SubscribedAnime {
+  externalId: number;
+  title: string;
+  latestEpisode: number;
+  status: string;
+  imageUrl: string;
 }
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
@@ -39,8 +36,9 @@ function SkeletonCard() {
 export default function DashboardPage() {
   const router = useRouter();
   const { data: session, isPending } = useSession();
+  const toast = useToast();
 
-  const [subs, setSubs] = useState<Subscription[]>([]);
+  const [subs, setSubs] = useState<SubscribedAnime[]>([]);
   const [loading, setLoading] = useState(true);
   const [dropping, setDropping] = useState<Set<number>>(new Set());
 
@@ -55,22 +53,27 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!session?.user) return;
     apiClient
-      .get<Subscription[]>('/user/subscriptions')
+      .get<SubscribedAnime[]>('/user/subscriptions')
       .then(res => setSubs(res.data))
       .catch(() => setSubs([]))
       .finally(() => setLoading(false));
   }, [session]);
 
-  const handleDrop = async (animeId: number) => {
-    setDropping(prev => new Set(prev).add(animeId));
+  const handleDrop = async (externalAnimeId: number, title: string) => {
+    setDropping(prev => new Set(prev).add(externalAnimeId));
     try {
-      await apiClient.delete('/unsubscribe', { data: { animeId } });
+      await apiClient.delete('/unsubscribe', { data: { externalAnimeId } });
       // Optimistic removal — no page refresh needed
-      setSubs(prev => prev.filter(s => s.animeId !== animeId));
+      setSubs(prev => prev.filter(s => s.externalId !== externalAnimeId));
+      toast(`Unsubscribed from ${title}`, 'info');
     } catch {
-      // silently fail — real app would toast here
+      toast('Failed to unsubscribe. Please try again.', 'error');
     } finally {
-      setDropping(prev => { const s = new Set(prev); s.delete(animeId); return s; });
+      setDropping(prev => {
+        const next = new Set(prev);
+        next.delete(externalAnimeId);
+        return next;
+      });
     }
   };
 
@@ -147,13 +150,13 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {subs.map(s => (
                 <AnimeCard
-                  key={s.id}
-                  title={s.anime.title}
-                  imageUrl={s.anime.imageUrl}
-                  latestEpisode={s.anime.latestEpisode}
-                  actionText={dropping.has(s.animeId) ? 'Dropping…' : 'Drop'}
-                  onAction={() => handleDrop(s.animeId)}
-                  isLoadingAction={dropping.has(s.animeId)}
+                  key={s.externalId}
+                  title={s.title}
+                  imageUrl={s.imageUrl}
+                  latestEpisode={s.latestEpisode}
+                  actionText={dropping.has(s.externalId) ? 'Dropping…' : 'Drop'}
+                  onAction={() => handleDrop(s.externalId, s.title)}
+                  isLoadingAction={dropping.has(s.externalId)}
                 />
               ))}
             </div>
