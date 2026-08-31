@@ -10,6 +10,12 @@ export const auth = betterAuth({
         const origin = request?.headers?.get("origin");
         return origin ? [origin] : [];
     },
+    advanced: {
+        defaultCookieAttributes: {
+            sameSite: "none",
+            secure: true,
+        }
+    },
     database: prismaAdapter(prisma, {
         provider: "postgresql",
     }),
