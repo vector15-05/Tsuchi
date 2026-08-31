@@ -8,10 +8,15 @@ import AnimeCard from '@/components/anime/AnimeCard';
 import { Button } from '@/components/ui/Button';
 
 interface Subscription {
-  id: string | number;
-  title: string;
-  coverImage: string;
-  latestEpisode: number;
+  id: string;
+  animeId: number;
+  anime: {
+    externalId: number;
+    title: string;
+    latestEpisode: number;
+    status: string;
+    imageUrl: string;
+  };
 }
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
@@ -37,7 +42,7 @@ export default function DashboardPage() {
 
   const [subs, setSubs] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dropping, setDropping] = useState<Set<string | number>>(new Set());
+  const [dropping, setDropping] = useState<Set<number>>(new Set());
 
   // Auth guard — wait for session to resolve before redirecting
   useEffect(() => {
@@ -56,16 +61,16 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, [session]);
 
-  const handleDrop = async (id: string | number) => {
-    setDropping(prev => new Set(prev).add(id));
+  const handleDrop = async (animeId: number) => {
+    setDropping(prev => new Set(prev).add(animeId));
     try {
-      await apiClient.delete('/subscribe', { data: { animeId: id } });
+      await apiClient.delete('/unsubscribe', { data: { animeId } });
       // Optimistic removal — no page refresh needed
-      setSubs(prev => prev.filter(s => s.id !== id));
+      setSubs(prev => prev.filter(s => s.animeId !== animeId));
     } catch {
       // silently fail — real app would toast here
     } finally {
-      setDropping(prev => { const s = new Set(prev); s.delete(id); return s; });
+      setDropping(prev => { const s = new Set(prev); s.delete(animeId); return s; });
     }
   };
 
@@ -143,12 +148,12 @@ export default function DashboardPage() {
               {subs.map(s => (
                 <AnimeCard
                   key={s.id}
-                  title={s.title}
-                  imageUrl={s.coverImage}
-                  latestEpisode={s.latestEpisode}
-                  actionText={dropping.has(s.id) ? 'Dropping…' : 'Drop'}
-                  onAction={() => handleDrop(s.id)}
-                  isLoadingAction={dropping.has(s.id)}
+                  title={s.anime.title}
+                  imageUrl={s.anime.imageUrl}
+                  latestEpisode={s.anime.latestEpisode}
+                  actionText={dropping.has(s.animeId) ? 'Dropping…' : 'Drop'}
+                  onAction={() => handleDrop(s.animeId)}
+                  isLoadingAction={dropping.has(s.animeId)}
                 />
               ))}
             </div>

@@ -5,15 +5,22 @@ import { useRouter } from 'next/navigation';
 import apiClient from '@/src/lib/apiClient';
 import { useSession } from '@/src/lib/authClient';
 import AnimeCard from '@/components/anime/AnimeCard';
+import { useToast } from '@/components/ui/Toast';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface Anime {
-  id: string | number;
+interface AnimeItem {
+  externalId: number;
   title: string;
-  coverImage: string;
-  episode: number;
-  genre?: string;
+  latestEpisode: number;
+  status: string;
+  imageUrl: string;
+}
+
+interface SubscriptionItem {
+  id: string;
+  animeId: number;
+  anime: AnimeItem;
 }
 
 // ─── Skeleton card ────────────────────────────────────────────────────────────
@@ -37,36 +44,79 @@ export default function HomePage() {
   const router = useRouter();
   const { data: session } = useSession();
   const isLoggedIn = !!session?.user;
+  const toast = useToast();
 
-  const [anime, setAnime] = useState<Anime[]>([]);
+  const [animeList, setAnimeList] = useState<AnimeItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Per-card subscription state
-  const [subscribing, setSubscribing] = useState<Set<string | number>>(new Set());
-  const [subscribed, setSubscribed] = useState<Set<string | number>>(new Set());
+  const [subscribing, setSubscribing] = useState<Set<number>>(new Set());
+  const [subscribed, setSubscribed] = useState<Set<number>>(new Set());
 
+  // Load all currently airing anime from the backend
   useEffect(() => {
+    setLoading(true);
     apiClient
-      .get<Anime[]>('/anime/airing')
-      .then(res => setAnime(res.data))
-      .catch(() => setError('Failed to load airing anime. Is the backend running?'))
+      .get<AnimeItem[]>('/anime')
+      .then(res => {
+        setAnimeList(res.data);
+        setError(null);
+      })
+      .catch(() => {
+        setError('Failed to load anime list. Make sure the backend server is running.');
+      })
       .finally(() => setLoading(false));
   }, []);
 
-  const handleSubscribe = async (id: string | number) => {
+  // Fetch user's active subscriptions if logged in
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setSubscribed(new Set());
+      return;
+    }
+    apiClient
+      .get<SubscriptionItem[]>('/user/subscriptions')
+      .then(res => {
+        const subscribedIds = new Set(res.data.map(sub => sub.animeId));
+        setSubscribed(subscribedIds);
+      })
+      .catch(() => {
+        // user subscription fetch failure
+      });
+  }, [isLoggedIn]);
+
+  const handleSubscribeToggle = async (animeId: number, title: string) => {
     if (!isLoggedIn) {
       router.push('/login');
       return;
     }
-    setSubscribing(prev => new Set(prev).add(id));
+
+    const isSubbed = subscribed.has(animeId);
+    setSubscribing(prev => new Set(prev).add(animeId));
+
     try {
-      await apiClient.post('/subscribe', { animeId: id });
-      setSubscribed(prev => new Set(prev).add(id));
+      if (isSubbed) {
+        await apiClient.delete('/unsubscribe', { data: { animeId } });
+        setSubscribed(prev => {
+          const next = new Set(prev);
+          next.delete(animeId);
+          return next;
+        });
+        toast(`Unsubscribed from ${title}`, 'info');
+      } else {
+        await apiClient.post('/subscribe', { animeId });
+        setSubscribed(prev => new Set(prev).add(animeId));
+        toast(`Subscribed to ${title}!`, 'success');
+      }
     } catch {
-      // silently fail — real app would toast here
+      toast('Action failed. Please try again.', 'error');
     } finally {
-      setSubscribing(prev => { const s = new Set(prev); s.delete(id); return s; });
+      setSubscribing(prev => {
+        const next = new Set(prev);
+        next.delete(animeId);
+        return next;
+      });
     }
   };
 
@@ -97,25 +147,29 @@ export default function HomePage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {loading
             ? Array.from({ length: 10 }).map((_, i) => <SkeletonCard key={i} />)
-            : anime.map(a => (
-                <AnimeCard
-                  key={a.id}
-                  title={a.title}
-                  imageUrl={a.coverImage}
-                  latestEpisode={a.episode}
-                  actionText={
-                    subscribed.has(a.id) ? '✓ Subscribed'
-                    : isLoggedIn ? 'Subscribe'
-                    : 'Sign in to Subscribe'
-                  }
-                  onAction={() => handleSubscribe(a.id)}
-                  isLoadingAction={subscribing.has(a.id)}
-                />
-              ))
-          }
+            : animeList.map(a => {
+                const isSubbed = subscribed.has(a.externalId);
+                return (
+                  <AnimeCard
+                    key={a.externalId}
+                    title={a.title}
+                    imageUrl={a.imageUrl}
+                    latestEpisode={a.latestEpisode}
+                    actionText={
+                      isSubbed
+                        ? '✓ Subscribed'
+                        : isLoggedIn
+                        ? 'Subscribe'
+                        : 'Sign in to Subscribe'
+                    }
+                    onAction={() => handleSubscribeToggle(a.externalId, a.title)}
+                    isLoadingAction={subscribing.has(a.externalId)}
+                  />
+                );
+              })}
         </div>
 
-        {!loading && !error && anime.length === 0 && (
+        {!loading && !error && animeList.length === 0 && (
           <div className="text-center py-24 text-white/30 tracking-widest uppercase text-sm">
             No airing anime found.
           </div>
@@ -124,3 +178,4 @@ export default function HomePage() {
     </div>
   );
 }
+
