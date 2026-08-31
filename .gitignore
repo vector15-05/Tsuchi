@@ -33,8 +33,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # Finder (MacOS) folder config
 .DS_Store
 
-/generated/prisma
-
 # Agent / prompt files (local AI agent state, prompts, secrets)
 .agents/
 .claude
@@ -42,7 +40,6 @@ CLAUDE.md
 .copilot*
 .vscode/prompts/
 .github/copilot/
-generated
-generated/
+
 .vscode/
 .windsurf/

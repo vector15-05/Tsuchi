@@ -5,6 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "bun run src/index.ts",
+    "start": "bun run src/index.ts",
+    "postinstall": "prisma generate",
     "test": "bun run src/scripts/testPipeline.ts"
   },
   "devDependencies": {
