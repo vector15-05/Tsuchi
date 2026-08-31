@@ -1,68 +1,125 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import apiClient from '@/src/lib/apiClient';
+import { useSession } from '@/src/lib/authClient';
+import AnimeCard from '@/components/anime/AnimeCard';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface Anime {
+  id: string | number;
+  title: string;
+  coverImage: string;
+  episode: number;
+  genre?: string;
+}
+
+// ─── Skeleton card ────────────────────────────────────────────────────────────
+
+function SkeletonCard() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center font-sans">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-xl overflow-hidden animate-pulse font-mono">
+      <div className="aspect-[3/4] bg-white/10" />
+      <div className="p-4 flex flex-col gap-3">
+        <div className="h-4 w-3/4 rounded bg-white/10" />
+        <div className="h-3 w-1/3 rounded bg-white/10" />
+        <div className="h-9 w-full rounded-xl bg-white/10 mt-1" />
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default function HomePage() {
+  const router = useRouter();
+  const { data: session } = useSession();
+  const isLoggedIn = !!session?.user;
+
+  const [anime, setAnime] = useState<Anime[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Per-card subscription state
+  const [subscribing, setSubscribing] = useState<Set<string | number>>(new Set());
+  const [subscribed, setSubscribed] = useState<Set<string | number>>(new Set());
+
+  useEffect(() => {
+    apiClient
+      .get<Anime[]>('/anime/airing')
+      .then(res => setAnime(res.data))
+      .catch(() => setError('Failed to load airing anime. Is the backend running?'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSubscribe = async (id: string | number) => {
+    if (!isLoggedIn) {
+      router.push('/login');
+      return;
+    }
+    setSubscribing(prev => new Set(prev).add(id));
+    try {
+      await apiClient.post('/subscribe', { animeId: id });
+      setSubscribed(prev => new Set(prev).add(id));
+    } catch {
+      // silently fail — real app would toast here
+    } finally {
+      setSubscribing(prev => { const s = new Set(prev); s.delete(id); return s; });
+    }
+  };
+
+  return (
+    <div className="w-full font-mono">
+      {/* ── Hero ─────────────────────────────────────────────── */}
+      <header className="px-6 pt-16 pb-12 max-w-5xl mx-auto text-center">
+        <p className="text-xs tracking-[0.4em] text-white/40 uppercase mb-4">Currently Airing</p>
+        <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-white leading-tight">
+          Never Miss an<br />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-200">
+            Episode Again.
+          </span>
+        </h1>
+        <p className="mt-4 text-sm text-white/40 tracking-wide max-w-md mx-auto leading-relaxed">
+          Subscribe to airing anime and get notified the moment a new episode drops.
+        </p>
+      </header>
+
+      {/* ── Grid ─────────────────────────────────────────────── */}
+      <main className="px-6 pb-24 max-w-7xl mx-auto">
+        {error && (
+          <div className="mb-8 rounded-xl border border-red-500/20 bg-red-500/10 backdrop-blur-md px-5 py-4 text-sm text-red-300 text-center tracking-wide">
+            {error}
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {loading
+            ? Array.from({ length: 10 }).map((_, i) => <SkeletonCard key={i} />)
+            : anime.map(a => (
+                <AnimeCard
+                  key={a.id}
+                  title={a.title}
+                  imageUrl={a.coverImage}
+                  latestEpisode={a.episode}
+                  actionText={
+                    subscribed.has(a.id) ? '✓ Subscribed'
+                    : isLoggedIn ? 'Subscribe'
+                    : 'Sign in to Subscribe'
+                  }
+                  onAction={() => handleSubscribe(a.id)}
+                  isLoadingAction={subscribing.has(a.id)}
+                />
+              ))
+          }
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+
+        {!loading && !error && anime.length === 0 && (
+          <div className="text-center py-24 text-white/30 tracking-widest uppercase text-sm">
+            No airing anime found.
+          </div>
+        )}
       </main>
     </div>
   );
