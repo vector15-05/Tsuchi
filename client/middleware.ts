@@ -7,18 +7,10 @@ const SESSION_COOKIE_NAMES = [
   'better-auth.session_token.localhost',
 ];
 
-export function middleware(request: NextRequest) {
-  const hasSession = SESSION_COOKIE_NAMES.some(
-    name => request.cookies.has(name),
-  );
-
-  if (!hasSession) {
-    const loginUrl = new URL('/login', request.url);
-    // Preserve the intended destination so we can redirect back after login
-    loginUrl.searchParams.set('from', request.nextUrl.pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
+export function middleware(_request: NextRequest) {
+  // In cross-domain deployments (Frontend on Vercel, Backend on Render),
+  // session cookies are set on the backend domain.
+  // Auth guard is handled client-side in /dashboard/page.tsx via useSession().
   return NextResponse.next();
 }
 
