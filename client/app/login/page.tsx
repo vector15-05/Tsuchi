@@ -47,7 +47,7 @@ export default function AuthPage() {
   const isSignup = mode === 'signup';
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center px-4">
+    <div className="flex-1 w-full flex items-center justify-center px-4">
       {/* Glass card */}
       <div className="w-full max-w-md rounded-2xl border border-white/15 bg-black/40 backdrop-blur-2xl shadow-2xl shadow-black/60 p-8 flex flex-col gap-6">
 

@@ -60,7 +60,7 @@ export default function Navbar() {
             className="font-mono tracking-widest text-xs"
             onClick={() => router.push('/login')}
           >
-            SIGN IN
+            SIGN UP/IN
           </Button>
         )}
       </div>

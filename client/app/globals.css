@@ -1,26 +1,88 @@
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+
+/* ── Design tokens ────────────────────────────────────────────────────────── */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  /* Geist Mono as the sole font */
+  --font-sans: var(--font-geist-mono);
   --font-mono: var(--font-geist-mono);
+
+  /* Palette */
+  --color-background: #09090b;
+  --color-foreground: #f4f4f5;
 }
 
-@media (prefers-color-scheme: dark) {
+/* ── Base layer ───────────────────────────────────────────────────────────── */
+
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    color-scheme: dark;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #09090b; /* deep zinc — fallback behind GhostFibers */
+    color: #f4f4f5;            /* zinc-100 — crisp off-white */
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Ensure all text elements inherit mono by default */
+  * {
+    font-family: inherit;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ── Cinematic tech utilities ─────────────────────────────────────────────── */
+
+@layer utilities {
+  /* Electric blue glow — use on headings or key labels */
+  .text-glow {
+    text-shadow:
+      0 0 8px rgba(52, 55, 160, 0.9),
+      0 0 24px rgba(52, 55, 160, 0.5);
+  }
+
+  /* Crimson red glow — matches the fiber lineColor #350e21 */
+  .text-glow-red {
+    text-shadow:
+      0 0 10px rgba(180, 30, 60, 0.9),
+      0 0 28px rgba(180, 30, 60, 0.45);
+  }
+
+  /* Heavy frosted-glass panel — drop on any card/modal container */
+  .glass-panel {
+    background: rgba(0, 0, 0, 0.38);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+      0 20px 48px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  /* Lighter glass — for nav bars, badges, tooltips */
+  .glass-light {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+  }
+
+  /* Blue specular edge glow — matches the SpecularButton highlight */
+  .glow-border-blue {
+    box-shadow:
+      0 0 0 1px rgba(52, 55, 160, 0.5),
+      0 0 20px rgba(52, 55, 160, 0.3);
+  }
 }
