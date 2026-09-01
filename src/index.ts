@@ -30,9 +30,20 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+import { syncQueue } from './queues/syncQueue.ts';
+
 app.use('/api/auth', toNodeHandler(auth));
 app.use('/api/anime', animeRoutes);
 app.use('/api', subscriptionRoutes);
+
+app.post('/api/admin/trigger-sync', async (_req, res) => {
+    try {
+        await syncQueue.add('fetch-latest-episodes', {}, { removeOnComplete: true });
+        res.json({ success: true, message: 'Sync job enqueued' });
+    } catch (err: any) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
 
 app.get('/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

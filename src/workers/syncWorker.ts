@@ -121,8 +121,12 @@ export const syncWorker = new Worker(
                     }
                 }
             }
-            logger.info(`[Sync Worker] Database sync complete.`);
-            await sendSyncCompleteEmail({ totalAnime, updatedAnime, queuedJobs });
+            logger.info(`[Sync Worker] Database sync complete. Sending completion email...`);
+            try {
+                await sendSyncCompleteEmail({ totalAnime, updatedAnime, queuedJobs });
+            } catch (emailErr) {
+                logger.error(emailErr, '[Sync Worker] Error sending sync complete email');
+            }
         }
     },
     { connection: redisConnection }
