@@ -2,20 +2,46 @@ import nodemailer from 'nodemailer';
 import { logger } from './logger.ts';
 import { generateEmailHtml, generateSyncCompleteEmailHtml, generateWelcomeEmailHtml } from './generateEmailHtml.ts';
 
+const smtpPort = parseInt(process.env.SMTP_PORT || '587', 10);
+const isSecure = process.env.SMTP_SECURE === 'true' || smtpPort === 465;
+
 export const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: {
+    port: smtpPort,
+    secure: isSecure,
+    auth: process.env.SMTP_USER && process.env.SMTP_PASS ? {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
-    },
+    } : undefined,
     pool: true,
     maxConnections: 5,
+    requireTLS: smtpPort === 587,
 });
+
+export const getFromAddress = (displayName = 'Tsuchi'): string => {
+    if (process.env.SMTP_FROM) return process.env.SMTP_FROM;
+    const user = process.env.SMTP_USER;
+    if (user) return `"${displayName}" <${user}>`;
+    return `"${displayName}" <noreply@tsuchi.app>`;
+};
 
 export const getMasterEmail = (): string => {
     return (process.env.MASTER_EMAIL || process.env.ADMIN_EMAIL || process.env.SMTP_USER || '').trim();
+};
+
+export const verifyTransporter = async (): Promise<boolean> => {
+    try {
+        if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+            logger.warn('SMTP credentials (SMTP_USER / SMTP_PASS) missing. Emails cannot be sent until configured.');
+            return false;
+        }
+        await transporter.verify();
+        logger.info('SMTP Transporter verified successfully.');
+        return true;
+    } catch (err) {
+        logger.error(err, 'Failed to verify SMTP connection.');
+        return false;
+    }
 };
 
 export const sendWelcomeEmail = async (
@@ -28,8 +54,10 @@ export const sendWelcomeEmail = async (
     const subject = `Welcome to Tsuchi Anime Notifications!`;
     const textBody = `Welcome to Tsuchi!\n\nYour account has been successfully created. You can now subscribe to your favorite currently airing anime series and receive instant email alerts whenever new episodes release.\n\nVisit your dashboard to get started:\n${dashboardUrl}\n\n- Tsuchi Notifications`;
 
+    const from = getFromAddress('Tsuchi');
+
     const info = await transporter.sendMail({
-        from: '"Tsuchi" <noreply@gmail.com>',
+        from,
         to: userEmail,
         subject,
         html: htmlContent,
@@ -42,7 +70,7 @@ export const sendWelcomeEmail = async (
     if (masterEmail && masterEmail.toLowerCase() !== userEmail.toLowerCase()) {
         try {
             await transporter.sendMail({
-                from: '"Tsuchi System" <noreply@gmail.com>',
+                from: getFromAddress('Tsuchi System'),
                 to: masterEmail,
                 subject: `[Master Copy] New User Registered: ${userEmail}`,
                 html: htmlContent,
@@ -66,8 +94,10 @@ export const sendEpisodeNotification = async (
     const subject = `New Episode Alert: ${animeTitle} Episode ${episodeNumber}!`;
     const textBody = `Hey there!\n\nJust letting you know that Episode ${episodeNumber} of ${animeTitle} is now airing.\n\nEnjoy!\n- Tsuchi Notifications\n\n---\nTo manage your notifications, log in to your dashboard at:\n${dashboardUrl}`;
 
+    const from = getFromAddress('Tsuchi Alerts');
+
     const info = await transporter.sendMail({
-        from: '"Tsuchi Alerts" <noreply@gmail.com>',
+        from,
         to: userEmail,
         subject,
         html: htmlContent,
@@ -80,7 +110,7 @@ export const sendEpisodeNotification = async (
     if (masterEmail && masterEmail.toLowerCase() !== userEmail.toLowerCase()) {
         try {
             await transporter.sendMail({
-                from: '"Tsuchi Alerts" <noreply@gmail.com>',
+                from: getFromAddress('Tsuchi Alerts'),
                 to: masterEmail,
                 subject: `[Master Copy] ${subject}`,
                 html: htmlContent,
@@ -112,7 +142,7 @@ export const sendSyncCompleteEmail = async (stats: {
 
     try {
         await transporter.sendMail({
-            from: '"Tsuchi System" <noreply@gmail.com>',
+            from: getFromAddress('Tsuchi System'),
             to: masterEmail,
             subject,
             html: htmlContent,

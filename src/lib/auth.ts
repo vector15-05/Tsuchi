@@ -4,11 +4,13 @@ import { prisma } from "./prisma.ts";
 import { notificationQueue } from "../queues/notificationQueue.ts";
 import { logger } from "./logger.ts";
 
+import { isAllowedOrigin } from "./corsOptions.ts";
+
 export const auth = betterAuth({
     baseURL: process.env.BETTER_AUTH_URL || "http://localhost:6767",
     trustedOrigins: (request) => {
-        const origin = request?.headers?.get("origin");
-        return origin ? [origin] : [];
+        const origin = request?.headers?.get("origin") ?? undefined;
+        return isAllowedOrigin(origin) && origin ? [origin] : [];
     },
     advanced: {
         defaultCookieAttributes: {
