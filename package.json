@@ -20,6 +20,7 @@
     "typescript": "^7.0.2"
   },
   "dependencies": {
+    "@getbrevo/brevo": "^6.0.3",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.9.1",
     "better-auth": "^1.7.2",
