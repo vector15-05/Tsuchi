@@ -8,6 +8,7 @@ import { auth } from './lib/auth.ts';
 import { toNodeHandler } from 'better-auth/node';
 import { syncWorker } from './workers/syncWorker.ts';
 import { notificationWorker } from './workers/notificationWorker.ts';
+import { verifyTransporter } from './lib/mailer.ts';
 import animeRoutes from './routes/animeRoutes.ts';
 import subscriptionRoutes from './routes/subscriptionRoutes.ts';
 
@@ -56,6 +57,8 @@ const server = app.listen(Number(PORT), '0.0.0.0', async () => {
 
     await scheduleAnimeSync();
     logger.info('Cron jobs scheduled');
+
+    await verifyTransporter();
 });
 
 async function gracefulShutdown(signal: string) {
