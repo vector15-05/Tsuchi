@@ -1,5 +1,5 @@
 import { Worker } from "bullmq";
-import redisConnection from "../lib/redis.ts"
+import { createRedisConnection } from "../lib/redis.ts"
 import { prisma } from '../lib/prisma.ts'
 import { notificationQueue } from '../queues/notificationQueue.ts';
 import { logger } from '../lib/logger.ts';
@@ -129,7 +129,7 @@ export const syncWorker = new Worker(
             }
         }
     },
-    { connection: redisConnection }
+    { connection: createRedisConnection() }
 );
 
 syncWorker.on('failed', (job, err) => {

@@ -2,14 +2,13 @@ import { Redis } from 'ioredis';
 
 const raw = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
 
-function createRedisFromUrl(urlStr: string) {
+function buildOptions(urlStr: string) {
     try {
         if (/^\/\//.test(urlStr)) {
             urlStr = `redis:${urlStr}`;
         }
 
         const url = new URL(urlStr);
-
         const isTls = url.protocol === 'rediss:';
 
         const options: any = {
@@ -22,22 +21,34 @@ function createRedisFromUrl(urlStr: string) {
         if (url.password) options.password = decodeURIComponent(url.password);
         if (isTls) options.tls = {};
 
-        console.log('Redis connecting to', `${url.protocol}//${url.hostname}:${options.port}`);
-
-        return new Redis(options);
+        return options;
     } catch (err) {
         console.error('Invalid REDIS_URL:', urlStr, err);
-        return new Redis('redis://127.0.0.1:6379', { maxRetriesPerRequest: null });
+        return { host: '127.0.0.1', port: 6379, maxRetriesPerRequest: null };
     }
 }
 
-const connect = createRedisFromUrl(raw);
+/**
+ * Creates a fresh ioredis connection for a BullMQ client.
+ * BullMQ requires each Queue / Worker / QueueScheduler to have its own
+ * dedicated connection — they must NOT share a single instance.
+ */
+export function createRedisConnection(): Redis {
+    const opts = buildOptions(raw);
+    const conn = new Redis(opts);
+    conn.on('error', (err) => console.error('Redis error:', err.message));
+    return conn;
+}
 
-connect.on('connect', () => console.log('Redis: connect'));
-connect.on('ready', () => console.log('Redis: ready'));
-connect.on('close', () => console.log('Redis: close'));
-connect.on('reconnecting', (delay: any) => console.log('Redis: reconnecting in', delay));
-connect.on('error', (err) => console.log('Redis connection Error occured:', err));
+// Single shared connection for non-BullMQ use (e.g. caching, health checks).
+const sharedConnection = createRedisConnection();
+sharedConnection.on('connect', () => console.log('Redis: connect'));
+sharedConnection.on('ready', () => {
+    const url = new URL(raw.startsWith('//') ? `redis:${raw}` : raw);
+    console.log('Redis connecting to', `${url.protocol}//${url.hostname}:${url.port || 6379}`);
+    console.log('Redis: ready');
+});
+sharedConnection.on('close', () => console.log('Redis: close'));
+sharedConnection.on('reconnecting', (delay: any) => console.log('Redis: reconnecting in', delay));
 
-export default connect;
-
+export default sharedConnection;

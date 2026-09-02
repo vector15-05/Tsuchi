@@ -1,9 +1,9 @@
 import {Queue} from 'bullmq';
-import redisConnection from '../lib/redis.ts'
+import { createRedisConnection } from '../lib/redis.ts'
 
 export const notificationQueue = new Queue('tsuchi-notifications',
     {
-        connection: redisConnection,
+        connection: createRedisConnection(),
         defaultJobOptions: {
             attempts: 3,
             backoff: {

@@ -1,8 +1,8 @@
 import { Queue } from "bullmq"
-import redisConnect from '../lib/redis.ts'
+import { createRedisConnection } from '../lib/redis.ts'
 
 export const syncQueue = new Queue('tsuchi-sync-queue', {
-    connection: redisConnect
+    connection: createRedisConnection()
 });
 
 export async function scheduleAnimeSync() {

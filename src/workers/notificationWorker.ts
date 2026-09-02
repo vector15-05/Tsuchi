@@ -1,5 +1,5 @@
 import { Worker } from 'bullmq';
-import redisConnection from '../lib/redis.ts';
+import { createRedisConnection } from '../lib/redis.ts';
 import { logger } from '../lib/logger.ts';
 import { sendEpisodeNotification, sendWelcomeEmail } from '../lib/mailer.ts';
 
@@ -19,7 +19,7 @@ export const notificationWorker = new Worker(
             await sendWelcomeEmail(email, name);
         }
     },
-    { connection: redisConnection, concurrency: 10 }
+    { connection: createRedisConnection(), concurrency: 10 }
 );
 
 
