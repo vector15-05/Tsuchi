@@ -1,179 +1,227 @@
-# Tsuchi — Real-Time Anime Release Tracking & Notification Platform
+<p align="center">
+  <img src="client/public/android-chrome-512x512.png" width="100" alt="Tsuchi" />
+</p>
+
+<h1 align="center">Tsuchi</h1>
 
 <p align="center">
-  <img src="client/public/android-chrome-512x512.png" width="120" alt="Tsuchi Logo" />
+  <b>Automated anime episode tracking & instant email notifications.</b>
 </p>
 
 <p align="center">
-  <b>Automated, real-time anime episode release tracking and instant notification system.</b>
+  <a href="https://tsuchi-nu.vercel.app"><img alt="Live" src="https://img.shields.io/badge/live-tsuchi--nu.vercel.app-7eb3ff?style=flat-square" /></a>
+  <a href="https://tsuchi.onrender.com/health"><img alt="API" src="https://img.shields.io/badge/api-tsuchi.onrender.com-22c55e?style=flat-square" /></a>
 </p>
 
 ---
 
-## Overview
+## What is Tsuchi?
 
-Tsuchi is an end-to-end full-stack application that tracks currently airing anime series via the Jikan (MyAnimeList) API and notifies subscribed users when new episodes are released. It combines a WebGL-enhanced Next.js frontend with an event-driven Express backend powered by Prisma ORM, Neon PostgreSQL, Upstash Redis, and BullMQ background processing queues.
-
----
-
-## Technical Architecture
-
-### Frontend
-- **Framework**: Next.js 15 (App Router, React 19)
-- **Styling**: Vanilla CSS and Tailwind CSS v4
-- **Visual Effects**: OGL WebGL dynamic shader canvas (`GhostFibers`)
-- **Authentication**: Better Auth Client (`@better-auth/react`)
-- **Iconography**: Lucide React
-
-### Backend
-- **Runtime**: Node.js / Bun
-- **API Server**: Express.js
-- **Database & ORM**: PostgreSQL (Neon) with Prisma ORM 7 (`@prisma/adapter-pg`)
-- **Authentication**: Better Auth Server with Prisma Adapter
-- **Background Jobs & Queues**: BullMQ with Upstash Redis
-- **Notification Services**: Nodemailer (SMTP) with master administrative carbon-copying
-- **External Integration**: Jikan API v4 (MyAnimeList REST API)
+Tsuchi (通知 — Japanese for *notification*) tracks currently airing anime series and sends you an email the moment a new episode drops. Subscribe to the shows you're watching, and never miss a release again.
 
 ---
 
-## System Capabilities
+## Tech Stack
 
-- **Real-Time Airing Radar**: Aggregates and displays currently airing seasonal anime with live episode counts.
-- **Glassmorphism & WebGL Canvas UI**: Modern dark theme backed by a dynamic GPU-rendered shader canvas (`GhostFibers`).
-- **Better Auth Integration**: Secure password-based authentication with session management and user state persistence.
-- **Interactive Subscription Management**: Allows users to subscribe or unsubscribe directly from the homepage or manage their active watchlist via the dashboard.
-- **Automated Jikan Sync**: Scheduled background worker queries the Jikan API, detects episode increments, and updates state in the PostgreSQL database.
-- **Queued Email Dispatch**: Asynchronous notification workers compile and send HTML release notifications to subscribers.
-- **Master Administrator Audit Copy**: Automatically routes complete sync execution reports and carbon-copies subscriber notifications to the configured administrator email.
-- **End-to-End Verification Pipeline**: Includes a CLI verification script (`src/scripts/testPipeline.ts`) to validate database connectivity, Jikan API parsing, email rendering, and BullMQ queue execution.
+| Layer | Technology |
+|---|---|
+| **Frontend** | Next.js 16 · React 19 · Tailwind CSS v4 · OGL (WebGL shaders) |
+| **Backend** | Express 5 · Bun runtime |
+| **Database** | PostgreSQL (Neon) · Prisma ORM 7 (`@prisma/adapter-pg`) |
+| **Auth** | Better Auth (email + password, session cookies) |
+| **Job Queues** | BullMQ · Upstash Redis |
+| **Email** | Brevo transactional API (HTTP, no SMTP) |
+| **External API** | Jikan v4 (MyAnimeList) |
+| **Hosting** | Vercel (frontend) · Render (backend) |
 
 ---
 
-## Architecture Sequence Diagram
+## How It Works
 
 ```mermaid
 graph TD
-    User["User / Browser"] -->|Next.js 15 + Better Auth| ClientApp["Frontend App"]
-    ClientApp -->|REST API| Backend["Express Backend API (:6767)"]
-    Backend -->|Prisma ORM| Postgres[("Neon PostgreSQL DB")]
-    Backend -->|Upstash Redis| SyncQueue["BullMQ Sync Queue"]
-    Backend -->|Upstash Redis| NotificationQueue["BullMQ Notification Queue"]
+    User["Browser"] -->|Next.js| FE["Frontend (Vercel)"]
+    FE -->|REST + cookies| API["Express API (Render)"]
+    API -->|Prisma ORM| DB[("Neon PostgreSQL")]
+    API -->|BullMQ| SQ["Sync Queue"]
+    API -->|BullMQ| NQ["Notification Queue"]
 
-    subgraph BackgroundServices ["Background Processing Services"]
-        Cron["Hourly Cron Scheduler"] -->|Trigger| SyncQueue
-        SyncQueue --> SyncWorker["Sync Worker"]
-        SyncWorker -->|HTTP REST| JikanAPI["Jikan API v4"]
-        SyncWorker -->|Update State| Postgres
-        SyncWorker -->|Enqueue Alert Jobs| NotificationQueue
-        NotificationQueue --> NotificationWorker["Notification Worker"]
-        NotificationWorker -->|SMTP Email| EmailService["Subscriber & Master Email"]
+    subgraph Background Workers
+        Cron["Hourly Cron"] --> SQ
+        SQ --> SW["Sync Worker"]
+        SW -->|HTTP| Jikan["Jikan API v4"]
+        SW -->|upsert| DB
+        SW -->|enqueue emails| NQ
+        NQ --> NW["Notification Worker"]
+        NW -->|HTTPS| Brevo["Brevo Email API"]
     end
 ```
 
----
-
-## Environment Configuration
-
-### Backend Environment Configuration (`.env`)
-
-Create a `.env` file in the project root directory:
-
-```env
-DATABASE_URL="postgresql://user:password@host/neondb?sslmode=require"
-REDIS_URL="rediss://default:token@host.upstash.io:6379"
-PORT="6767"
-
-# Master Administrator Email
-ADMIN_EMAIL="admin@yourdomain.com"
-MASTER_EMAIL="admin@yourdomain.com"
-
-# SMTP Email Dispatcher
-SMTP_HOST="smtp.gmail.com"
-SMTP_PORT="587"
-SMTP_SECURE="false"
-SMTP_USER="admin@yourdomain.com"
-SMTP_PASS="your-16-char-app-password"
-
-FRONTEND_URL="http://localhost:3000"
-LOG_LEVEL="info"
-```
-
-### Frontend Environment Configuration (`client/.env.local`)
-
-Create a `.env.local` file in the `client/` directory:
-
-```env
-NEXT_PUBLIC_API_URL="http://localhost:6767/api"
-BETTER_AUTH_URL="http://localhost:6767"
-```
+1. **Hourly sync** — A BullMQ cron job fetches the current season from the Jikan API, upserts anime data into PostgreSQL, and detects new episode increments.
+2. **Queued notifications** — When a new episode is found, email jobs are bulk-enqueued for every subscriber of that anime.
+3. **Async delivery** — The notification worker processes email jobs (up to 10 concurrently) through Brevo's HTTP API with automatic retries and exponential backoff.
+4. **Admin audit trail** — The master admin email receives a copy of every notification and a post-sync summary report.
 
 ---
 
-## Installation & Setup
+## Data Model
 
-### 1. Repository Setup & Dependency Installation
+```
+User ──< Subscription >── Anime
+ │
+ ├── Session
+ ├── Account
+ └── (Verification)
+```
+
+| Model | Purpose |
+|---|---|
+| `User` | Registered account (email, name) |
+| `Anime` | Tracked series (externalId → MAL, latestEpisode, status, poster) |
+| `Subscription` | Many-to-many link between User ↔ Anime |
+| `Session` / `Account` / `Verification` | Managed by Better Auth |
+
+---
+
+## Pages
+
+| Route | Description |
+|---|---|
+| `/` | Homepage — browse all currently airing anime, subscribe/unsubscribe |
+| `/login` | Email + password authentication |
+| `/dashboard` | Personal subscription radar — manage your watchlist |
+
+The UI uses a dark glassmorphism aesthetic with a GPU-rendered WebGL shader canvas (`GhostFibers`) behind the content layer.
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- [Bun](https://bun.sh) ≥ 1.3
+- [PostgreSQL](https://neon.tech) database (Neon free tier works)
+- [Upstash Redis](https://upstash.com) instance (free tier works)
+- [Brevo](https://brevo.com) account (free — 300 emails/day)
+
+### 1. Clone & install
 
 ```bash
 git clone https://github.com/vector15-05/Tsuchi.git
 cd Tsuchi
 
-# Install root dependencies
+# Backend dependencies
 bun install
 
-# Install frontend dependencies
-cd client
-bun install
-cd ..
+# Frontend dependencies
+cd client && bun install && cd ..
 ```
 
----
+### 2. Configure environment
 
-### 2. Database Schema Generation & Migration
+**Backend** — copy `.env.example` → `.env` and fill in:
+
+```env
+DATABASE_URL="postgresql://..."
+REDIS_URL="rediss://..."
+PORT=6767
+BETTER_AUTH_URL="http://localhost:6767"
+
+BREVO_API_KEY="xkeysib-..."
+BREVO_FROM_EMAIL="your-verified@gmail.com"
+BREVO_FROM_NAME="Tsuchi"
+ADMIN_EMAIL="your@email.com"
+
+FRONTEND_URL="http://localhost:3000"
+LOG_LEVEL=info
+```
+
+**Frontend** — copy `client/.env.example` → `client/.env.local`:
+
+```env
+API_URL="http://localhost:6767/api"
+BETTER_AUTH_URL="http://localhost:6767"
+```
+
+### 3. Database setup
 
 ```bash
-# Generate Prisma Client (Prisma 7 with pg adapter)
 npx prisma generate
-
-# Apply database migrations
 npx prisma migrate dev
 ```
 
----
-
-### 3. Execution
-
-#### Backend API Server & Worker Process
+### 4. Run
 
 ```bash
-# Starts Express HTTP server and BullMQ background workers
-bun run src/index.ts
-```
-
-The Express API will listen on `http://localhost:6767` and BullMQ workers will initialize listening for queue jobs.
-
-#### Next.js Development Server
-
-In a separate terminal session:
-
-```bash
-cd client
+# Terminal 1 — Backend (API + workers)
 bun run dev
+
+# Terminal 2 — Frontend
+cd client && bun run dev
 ```
 
-The user interface will be available at `http://localhost:3000`.
+- **Backend**: `http://localhost:6767`
+- **Frontend**: `http://localhost:3000`
 
 ---
 
-## Verification & Automated Testing
+## Deployment
 
-Tsuchi provides a comprehensive verification pipeline script to test database persistence, API ingestion, email rendering, and queue processing end-to-end:
+| Component | Platform | Notes |
+|---|---|---|
+| Frontend | **Vercel** | Auto-deploys from `client/` directory |
+| Backend | **Render** | Web service running `bun run src/index.ts` |
 
-```bash
-bun run src/scripts/testPipeline.ts
+Set all env vars from `.env.example` in the respective platform dashboards. Key differences for production:
+
+- `BETTER_AUTH_URL` → your Render service URL
+- `FRONTEND_URL` → your Vercel deployment URL
+- Cookie `sameSite: "none"` and `secure: true` are pre-configured for cross-origin auth
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/anime` | No | List all currently airing anime |
+| `POST` | `/api/subscribe` | Yes | Subscribe to an anime |
+| `DELETE` | `/api/unsubscribe` | Yes | Unsubscribe from an anime |
+| `GET` | `/api/user/subscriptions` | Yes | Get current user's subscriptions |
+| `POST` | `/api/admin/trigger-sync` | No | Manually trigger an anime sync job |
+| `GET` | `/health` | No | Health check |
+| `ALL` | `/api/auth/*` | — | Better Auth routes (login, register, session) |
+
+---
+
+## Project Structure
+
+```
+Tsuchi/
+├── client/                     # Next.js 16 frontend
+│   ├── app/                    # App Router pages (home, login, dashboard)
+│   ├── components/             # UI components (AnimeCard, Button, Toast, etc.)
+│   └── src/lib/                # API client, auth client
+├── src/                        # Express backend
+│   ├── controllers/            # Route handlers
+│   ├── lib/                    # Core modules
+│   │   ├── auth.ts             # Better Auth config + welcome email hook
+│   │   ├── mailer.ts           # Brevo email dispatcher
+│   │   ├── prisma.ts           # Prisma client
+│   │   └── redis.ts            # Redis connection factory (BullMQ)
+│   ├── queues/                 # BullMQ queue definitions
+│   ├── routes/                 # Express route files
+│   ├── workers/                # Background job processors
+│   │   ├── syncWorker.ts       # Jikan API sync + episode detection
+│   │   └── notificationWorker.ts  # Email dispatch worker
+│   └── index.ts                # Server entrypoint
+├── prisma/
+│   └── schema.prisma           # Database schema
+└── package.json
 ```
 
 ---
 
 ## License
 
-This software is licensed under the [MIT License](LICENSE).
+[MIT](LICENSE)
